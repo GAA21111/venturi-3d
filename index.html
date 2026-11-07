@@ -265,18 +265,18 @@ function solve(){
   const st=[];
   st.push(['Datos',R`\begin{aligned} d_A &= ${mm(dA)}${U('mm')}, & d_B &= ${mm(dB)}${U('mm')}\\ \rho &= ${rho}${U('kg/m^3')}, & \rho_m &= ${rhom}${U('kg/m^3')}\end{aligned}`,cur&&cur.conv?'Conversión: '+cur.conv:'']);
   if(mode==='h'){
-    st.push(['Continuidad (Q<sub>A</sub> = Q<sub>B</sub>)',R`v_A = v_B\left(\frac{d_B}{d_A}\right)^2 = ${fx(vB,3)}\left(\frac{${mm(dB)}}{${mm(dA)}}\right)^2 = ${fx(vA,3)}${U('m/s')}`]);
-    st.push(['Bernoulli entre A y B',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= \frac{v_B^2-v_A^2}{2g}\\ &= \frac{${fx(vB*vB,3)}-${fx(vA*vA,3)}}{2(9.81)} = ${fx(dH,4)}${U('m')}\end{aligned}`]);
+    st.push(['Continuidad (Q<sub>A</sub> = Q<sub>B</sub>)',R`\begin{aligned} v_A &= v_B\left(\frac{d_B}{d_A}\right)^2 = ${fx(vB,3)}\left(\frac{${mm(dB)}}{${mm(dA)}}\right)^2\\ &= ${fx(vA,3)}${U('m/s')}\end{aligned}`]);
+    st.push(['Bernoulli entre A y B',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= \frac{v_B^2-v_A^2}{2g}\\ &= \frac{${fx(vB*vB,3)}-${fx(vA*vA,3)}}{2(9.81)}\\ &= ${fx(dH,4)}${U('m')}\end{aligned}`]);
     st.push(['Ecuación del manómetro',R`\frac{p_A-p_B}{\gamma}+(z_A-z_B) = h\left(\frac{\rho_m}{\rho}-1\right)`,'Las alturas z aparecen en ambos lados y se cancelan.']);
-    st.push(['Despejar h',R`h = \frac{${fx(dH,4)}}{\dfrac{${rhom}}{${rho}}-1} = \frac{${fx(dH,4)}}{${fx(fac,4)}} = ${fx(h,4)}${U('m')}`]);
-    st.push(['Caudal (extra)',R`Q = A_B\,v_B = \frac{\pi(${fx(dB,4)})^2}{4}(${fx(vB,3)}) = ${texSci(Q)}${U('m^3/s')}`]);
+    st.push(['Despejar h',R`\begin{aligned} h &= \frac{${fx(dH,4)}}{\dfrac{${rhom}}{${rho}}-1} = \frac{${fx(dH,4)}}{${fx(fac,4)}}\\ &= ${fx(h,4)}${U('m')}\end{aligned}`]);
+    st.push(['Caudal (extra)',R`\begin{aligned} Q &= A_B\,v_B = \frac{\pi(${fx(dB,4)})^2}{4}(${fx(vB,3)})\\ &= ${texSci(Q)}${U('m^3/s')}\end{aligned}`]);
   }else{
-    st.push(['Ecuación del manómetro',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= h\left(\frac{\rho_m}{\rho}-1\right)\\ &= ${fx(h,4)}\left(\frac{${rhom}}{${rho}}-1\right) = ${fx(dH,4)}${U('m')}\end{aligned}`]);
+    st.push(['Ecuación del manómetro',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= h\left(\frac{\rho_m}{\rho}-1\right)\\ &= ${fx(h,4)}\left(\frac{${rhom}}{${rho}}-1\right)\\ &= ${fx(dH,4)}${U('m')}\end{aligned}`]);
     st.push(['Continuidad (Q<sub>A</sub> = Q<sub>B</sub>)',R`v_B = v_A\left(\frac{d_A}{d_B}\right)^2 = ${fx(1/k,4)}\,v_A`]);
-    st.push(['Bernoulli entre A y B',R`\begin{aligned} ${fx(dH,4)} &= \frac{v_B^2-v_A^2}{2g} = \frac{(${fx(1/(k*k),4)}-1)\,v_A^2}{2(9.81)}\\ v_A &= \sqrt{\frac{2(9.81)(${fx(dH,4)})}{${fx(1/(k*k)-1,4)}}} = ${fx(vA,3)}${U('m/s')}\end{aligned}`]);
-    st.push(['Caudal',R`Q = A_A\,v_A = \frac{\pi(${fx(dA,4)})^2}{4}(${fx(vA,3)}) = ${texSci(Q)}${U('m^3/s')}`]);
+    st.push(['Bernoulli entre A y B',R`\begin{aligned} ${fx(dH,4)} &= \frac{v_B^2-v_A^2}{2g}\\ &= \frac{(${fx(1/(k*k),4)}-1)\,v_A^2}{2(9.81)}\\ v_A &= \sqrt{\frac{2(9.81)(${fx(dH,4)})}{${fx(1/(k*k)-1,4)}}}\\ &= ${fx(vA,3)}${U('m/s')}\end{aligned}`]);
+    st.push(['Caudal',R`\begin{aligned} Q &= A_A\,v_A = \frac{\pi(${fx(dA,4)})^2}{4}(${fx(vA,3)})\\ &= ${texSci(Q)}${U('m^3/s')}\end{aligned}`]);
   }
-  if(dp!==null)st.push(['Diferencia de presiones',R`\begin{aligned} p_A-p_B &= \gamma\left[${fx(dH,4)}+(z_B-z_A)\right]\\ &= (${fx(rho*g/1000,3)}${U('kN/m^3')})(${fx(dH,4)}+${dz}${U('m')}) = ${(dp/1000).toFixed(2)}${U('kPa')}\end{aligned}`]);
+  if(dp!==null)st.push(['Diferencia de presiones',R`\begin{aligned} p_A-p_B &= \gamma\left[${fx(dH,4)}+(z_B-z_A)\right]\\ &= (${fx(rho*g/1000,3)})(${fx(dH,4)}+${dz})\\ &= ${(dp/1000).toFixed(2)}${U('kPa')}\end{aligned}`]);
   S.innerHTML=st.map(([a,t,n])=>`<li>${a}<div class="tx">\\[${t}\\]</div>${n?`<p class="sn">${n}</p>`:''}</li>`).join('')
     +(cur&&cur.check?`<li>Comparar con los apuntes<p class="sn">${cur.check}</p></li>`:'');
   typeset();
