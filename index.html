@@ -303,7 +303,7 @@ function build(hReal){
   const [la,lay]=toWorld(XA,R1+2.6),[lb,lby]=toWorld(XB,R2+2.6);
   const sA=label('A','#ffffff','rgba(24,95,165,0.92)');sA.position.set(la,lay,0);manoG.add(sA);
   const sB=label('B','#ffffff','rgba(24,95,165,0.92)');sB.position.set(lb,lby,0);manoG.add(sB);
-const ftxt=ANG===0?'Flujo →':(ANG<0?'Flujo ↘':'Flujo ↑');
+const ftxt=ANG===0?'Flujo →':(ANG<0?'Flujo ↘':'Flujo ▲');
   const [fx0,fy0]=toWorld(12,R1+3.2);const sF=label(ftxt,'#ffffff','rgba(40,48,58,0.85)');sF.position.set(fx0,fy0,0);manoG.add(sF);
   ground.position.y=base-3;gridH.position.y=base-2.98;
   key.target.position.set(0,base,0);key.target.updateMatrixWorld();
@@ -323,7 +323,7 @@ const tmpC=new THREE.Color();
 const VIEWS={
  h:{ang:0,pos:[16,4,74],tgt:[-2,-9,0]},
  i:{ang:-0.42,pos:[18,8,80],tgt:[-2,-7,0]},
- v:{ang:Math.PI/2,pos:[44,6,100],tgt:[8,-6,0]},
+ v:{ang:Math.PI/2,pos:[58,0,128],tgt:[10,-10,0]},
 };
 let lastOri=null;
 
