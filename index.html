@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Medidor Venturi 3D</title>
+<script>window.MathJax={tex:{displayMath:[['\\[','\\]']]},svg:{fontCache:'global'},startup:{typeset:false,pageReady(){return MathJax.startup.defaultPageReady().then(()=>window.__vtTypeset&&window.__vtTypeset());}}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <style>
 /* Layout: escena 3D a pantalla completa + panel lateral de ejemplos, datos y procedimiento */
@@ -43,7 +45,9 @@ h2{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
 .m.key{outline:1.5px solid var(--acc)}
 .m.key b{color:var(--acc)}
 ol#steps{margin:0;padding-left:20px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:8px}
-ol#steps li span.eq{display:block;font-family:var(--f-mono);font-size:12px;color:var(--tx2);overflow-x:auto;white-space:nowrap;margin-top:2px}
+ol#steps .tx{overflow-x:auto;overflow-y:hidden;margin-top:2px;color:var(--tx);font-size:14px}
+ol#steps .tx mjx-container[display="true"]{margin:4px 0!important;text-align:left!important}
+ol#steps .sn{margin:2px 0 0;font-size:12px;color:var(--tx2)}
 .note{font-size:12px;color:var(--tx2);margin:0;line-height:1.5}
 #tog{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--panel);color:var(--tx);cursor:pointer;font-size:13px}
 #legend{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--tx2);background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;display:flex;gap:12px;flex-wrap:wrap}
@@ -224,6 +228,10 @@ let lastOri=null;
 /* ---------- Cálculo ---------- */
 const fx=(n,d=3)=>Number.isFinite(n)?n.toFixed(d):'—';
 function sci(q){if(!Number.isFinite(q))return '—';const e=Math.floor(Math.log10(Math.abs(q)));const m=q/10**e;return `${m.toFixed(2)}×10${sup(e)} m³/s`;}
+function texSci(q){if(!Number.isFinite(q))return '?';const e=Math.floor(Math.log10(Math.abs(q)));return `${(q/10**e).toFixed(2)}\times10^{${e}}`;}
+let mjBusy=Promise.resolve();
+function typeset(){const M=window.MathJax;if(!M||!M.typesetPromise){return;}const el=$('steps');mjBusy=mjBusy.then(()=>{M.typesetClear&&M.typesetClear([el]);return M.typesetPromise([el]);}).catch(()=>{});}
+window.__vtTypeset=typeset;
 function sup(e){const m={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};return String(e).split('').map(c=>m[c]).join('');}
 
 function solve(){
@@ -250,25 +258,28 @@ function solve(){
   $('r2').textContent=dp===null?'no se necesita':(dp/1000).toFixed(2)+' kPa';
   $('r2b').textContent=dp===null?'falta z_B − z_A':'';
   $('kH').classList.toggle('key',mode==='h');$('kQ').classList.toggle('key',mode==='Q');
-  // procedimiento
-  const dAm=(dA*1000).toFixed(1).replace(/\.0$/,''),dBm=(dB*1000).toFixed(1).replace(/\.0$/,'');
+  // procedimiento (LaTeX, renderizado con MathJax)
+  const mm=x=>(x*1000).toFixed(1).replace(/\.0$/,'');
+  const R=String.raw;
+  const U=u=>R`\ \mathrm{${u}}`;
   const st=[];
-  st.push(['Datos',`d_A = ${dAm} mm, d_B = ${dBm} mm, ρ = ${rho} kg/m³, ρ_m = ${rhom} kg/m³`+(cur&&cur.conv?`<br>${cur.conv}`:'')]);
+  st.push(['Datos',R`\begin{aligned} d_A &= ${mm(dA)}${U('mm')}, & d_B &= ${mm(dB)}${U('mm')}\\ \rho &= ${rho}${U('kg/m^3')}, & \rho_m &= ${rhom}${U('kg/m^3')}\end{aligned}`,cur&&cur.conv?'Conversión: '+cur.conv:'']);
   if(mode==='h'){
-    st.push(['Continuidad (Q_A = Q_B)',`v_A = v_B (d_B/d_A)² = ${fx(vB,3)} (${dBm}/${dAm})² = ${fx(vA,3)} m/s`]);
-    st.push(['Bernoulli entre A y B',`(p_A − p_B)/γ + (z_A − z_B) = (v_B² − v_A²)/2g<br>= (${fx(vB*vB,3)} − ${fx(vA*vA,3)}) / 19.62 = ${fx(dH,4)} m`]);
-    st.push(['Ecuación del manómetro',`(p_A − p_B)/γ + (z_A − z_B) = h (ρ_m/ρ − 1)<br>las alturas z se cancelan en ambos lados`]);
-    st.push(['Despejar h',`h = ${fx(dH,4)} / (${rhom}/${rho} − 1) = ${fx(dH,4)} / ${fx(fac,4)} = ${fx(h,4)} m`]);
-    st.push(['Caudal (extra)',`Q = A_B v_B = π(${fx(dB,4)})²/4 · ${fx(vB,3)} = ${sci(Q)}`]);
+    st.push(['Continuidad (Q<sub>A</sub> = Q<sub>B</sub>)',R`v_A = v_B\left(\frac{d_B}{d_A}\right)^2 = ${fx(vB,3)}\left(\frac{${mm(dB)}}{${mm(dA)}}\right)^2 = ${fx(vA,3)}${U('m/s')}`]);
+    st.push(['Bernoulli entre A y B',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= \frac{v_B^2-v_A^2}{2g}\\ &= \frac{${fx(vB*vB,3)}-${fx(vA*vA,3)}}{2(9.81)} = ${fx(dH,4)}${U('m')}\end{aligned}`]);
+    st.push(['Ecuación del manómetro',R`\frac{p_A-p_B}{\gamma}+(z_A-z_B) = h\left(\frac{\rho_m}{\rho}-1\right)`,'Las alturas z aparecen en ambos lados y se cancelan.']);
+    st.push(['Despejar h',R`h = \frac{${fx(dH,4)}}{\dfrac{${rhom}}{${rho}}-1} = \frac{${fx(dH,4)}}{${fx(fac,4)}} = ${fx(h,4)}${U('m')}`]);
+    st.push(['Caudal (extra)',R`Q = A_B\,v_B = \frac{\pi(${fx(dB,4)})^2}{4}(${fx(vB,3)}) = ${texSci(Q)}${U('m^3/s')}`]);
   }else{
-    st.push(['Ecuación del manómetro',`(p_A − p_B)/γ + (z_A − z_B) = h (ρ_m/ρ − 1)<br>= ${fx(h,4)} (${rhom}/${rho} − 1) = ${fx(dH,4)} m`]);
-    st.push(['Continuidad (Q_A = Q_B)',`v_B = v_A (d_A/d_B)² = ${fx(1/k,4)} v_A`]);
-    st.push(['Bernoulli entre A y B',`${fx(dH,4)} = (v_B² − v_A²)/2g = (${fx(1/(k*k),4)} − 1) v_A² / 19.62<br>v_A = √(19.62 · ${fx(dH,4)} / ${fx(1/(k*k)-1,4)}) = ${fx(vA,3)} m/s`]);
-    st.push(['Caudal',`Q = A_A v_A = π(${fx(dA,4)})²/4 · ${fx(vA,3)} = ${sci(Q)}`]);
+    st.push(['Ecuación del manómetro',R`\begin{aligned}\frac{p_A-p_B}{\gamma}+(z_A-z_B) &= h\left(\frac{\rho_m}{\rho}-1\right)\\ &= ${fx(h,4)}\left(\frac{${rhom}}{${rho}}-1\right) = ${fx(dH,4)}${U('m')}\end{aligned}`]);
+    st.push(['Continuidad (Q<sub>A</sub> = Q<sub>B</sub>)',R`v_B = v_A\left(\frac{d_A}{d_B}\right)^2 = ${fx(1/k,4)}\,v_A`]);
+    st.push(['Bernoulli entre A y B',R`\begin{aligned} ${fx(dH,4)} &= \frac{v_B^2-v_A^2}{2g} = \frac{(${fx(1/(k*k),4)}-1)\,v_A^2}{2(9.81)}\\ v_A &= \sqrt{\frac{2(9.81)(${fx(dH,4)})}{${fx(1/(k*k)-1,4)}}} = ${fx(vA,3)}${U('m/s')}\end{aligned}`]);
+    st.push(['Caudal',R`Q = A_A\,v_A = \frac{\pi(${fx(dA,4)})^2}{4}(${fx(vA,3)}) = ${texSci(Q)}${U('m^3/s')}`]);
   }
-  if(dp!==null)st.push(['Diferencia de presiones',`p_A − p_B = γ [${fx(dH,4)} + (z_B − z_A)] = ${fx(rho*g/1000,3)} kN/m³ · (${fx(dH,4)} + ${dz}) = ${(dp/1000).toFixed(2)} kPa`]);
-  if(cur&&cur.check)st.push(['Comparar con los apuntes',cur.check]);
-  S.innerHTML=st.map(([a,b])=>`<li>${a}<span class="eq">${b}</span></li>`).join('');
+  if(dp!==null)st.push(['Diferencia de presiones',R`\begin{aligned} p_A-p_B &= \gamma\left[${fx(dH,4)}+(z_B-z_A)\right]\\ &= (${fx(rho*g/1000,3)}${U('kN/m^3')})(${fx(dH,4)}+${dz}${U('m')}) = ${(dp/1000).toFixed(2)}${U('kPa')}\end{aligned}`]);
+  S.innerHTML=st.map(([a,t,n])=>`<li>${a}<div class="tx">\\[${t}\\]</div>${n?`<p class="sn">${n}</p>`:''}</li>`).join('')
+    +(cur&&cur.check?`<li>Comparar con los apuntes<p class="sn">${cur.check}</p></li>`:'');
+  typeset();
   return {h,vB};
 }
 
