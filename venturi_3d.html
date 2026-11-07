@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Medidor Venturi 3D</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<style>
+/* Layout: escena 3D a pantalla completa + panel lateral de ejemplos, datos y procedimiento */
+:root{--bg:#f3f5f7;--panel:#fffffff2;--tx:#1b2430;--tx2:#566170;--bd:#d2d9e1;--acc:#185FA5;--acc-bg:#e3eef9;--card:#eef2f6;--ok:#2f7d4f;
+--f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181d;--panel:#1e242bf2;--tx:#eef2f6;--tx2:#a7b1bd;--bd:#38424d;--acc:#85B7EB;--acc-bg:#1f3347;--card:#262e37;--ok:#7cc79a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14181d;--panel:#1e242bf2;--tx:#eef2f6;--tx2:#a7b1bd;--bd:#38424d;--acc:#85B7EB;--acc-bg:#1f3347;--card:#262e37;--ok:#7cc79a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--f-body);overflow:hidden}
+#c3{position:fixed;inset:0}
+#panel{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:400px;overflow:auto;background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;backdrop-filter:blur(8px);display:flex;flex-direction:column;gap:14px}
+h1{font-size:17px;font-weight:600;margin:0}
+h2{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);margin:0 0 6px}
+.hint{font-size:12px;color:var(--tx2);margin:4px 0 0}
+#ex{display:flex;flex-direction:column;gap:6px}
+#ex button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);font-size:13px}
+#ex button .tag{grid-row:span 2;align-self:center;font-family:var(--f-mono);font-size:11px;color:var(--tx2);min-width:62px}
+#ex button .t{font-weight:500}
+#ex button .s{font-size:12px;color:var(--tx2)}
+#ex button[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-bg)}
+#ex button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#stmt{font-size:13px;line-height:1.55;margin:0;padding:10px 12px;border-left:3px solid var(--acc);background:var(--card);border-radius:0 8px 8px 0}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.seg button{all:unset;cursor:pointer;text-align:center;padding:7px;font-size:13px;color:var(--tx2)}
+.seg button[aria-pressed="true"]{background:var(--acc);color:var(--bg);font-weight:500}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--tx2);min-width:0}
+.f input,.f select{width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}
+.f.full{grid-column:1/-1}
+.f[hidden]{display:none!important}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.m{background:var(--card);border-radius:8px;padding:8px 10px;min-width:0}
+.m p{margin:0;font-size:12px;color:var(--tx2)}
+.m b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.m small{display:block;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.m.key{outline:1.5px solid var(--acc)}
+.m.key b{color:var(--acc)}
+ol#steps{margin:0;padding-left:20px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:8px}
+ol#steps li span.eq{display:block;font-family:var(--f-mono);font-size:12px;color:var(--tx2);overflow-x:auto;white-space:nowrap;margin-top:2px}
+.note{font-size:12px;color:var(--tx2);margin:0;line-height:1.5}
+#tog{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--panel);color:var(--tx);cursor:pointer;font-size:13px}
+#legend{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--tx2);background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;display:flex;gap:12px;flex-wrap:wrap}
+#legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+@media (max-width:760px){
+#panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:55%;border-radius:12px 12px 0 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#legend{display:none}
+}
+@media (prefers-reduced-motion:reduce){#panel{backdrop-filter:none}}
+</style>
+</head>
+<body>
+
+<div id="c3"></div>
+<button id="tog" type="button">Ocultar panel</button>
+<div id="legend"><span><i id="lgF"></i><span id="lgFt">Agua</span></span><span><i id="lgM"></i><span id="lgMt">Mercurio</span></span><span><i style="background:#D85A30"></i>Desviación h</span></div>
+
+<div id="panel">
+  <div>
+    <h1>Medidor Venturi con manómetro en U</h1>
+    <p class="hint">Arrastra para girar, rueda o pellizco para zoom. A = sección grande, B = garganta.</p>
+  </div>
+
+  <section>
+    <h2>Ejemplos de los apuntes</h2>
+    <div id="ex" role="group" aria-label="Ejemplos"></div>
+  </section>
+
+  <p id="stmt"></p>
+
+  <section>
+    <h2>¿Qué se calcula?</h2>
+    <div class="seg" role="group" aria-label="Incógnita">
+      <button type="button" id="mH">La desviación h</button>
+      <button type="button" id="mQ">El caudal Q</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Datos (SI)</h2>
+    <div class="fields">
+      <label class="f">d<sub>A</sub>, sección grande (mm)<input id="dA" type="number" min="5" step="0.1"></label>
+      <label class="f">d<sub>B</sub>, garganta (mm)<input id="dB" type="number" min="2" step="0.1"></label>
+      <label class="f">ρ del fluido (kg/m³)<input id="rho" type="number" min="1" step="0.1"></label>
+      <label class="f">ρ manométrico (kg/m³)<input id="rhom" type="number" min="1" step="1"></label>
+      <label class="f" id="fv">v<sub>B</sub> en la garganta (m/s)<input id="vB" type="number" min="0.01" step="0.01"></label>
+      <label class="f" id="fh">Desviación h (m)<input id="hin" type="number" min="0.001" step="0.001"></label>
+      <label class="f">z<sub>B</sub> − z<sub>A</sub> (m)<input id="dz" type="number" step="0.01" placeholder="no dado"></label>
+      <label class="f full">Posición del medidor
+        <select id="ori"><option value="h">Horizontal</option><option value="i">Inclinado, el flujo baja</option><option value="v">Vertical, el flujo sube</option></select>
+      </label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Resultados</h2>
+    <div class="grid">
+      <div class="m" id="kH"><p>Desviación h</p><b id="r3"></b><small id="r3b"></small></div>
+      <div class="m" id="kQ"><p>Caudal Q</p><b id="r4"></b><small id="r4b"></small></div>
+      <div class="m"><p>v<sub>A</sub></p><b id="r1"></b></div>
+      <div class="m"><p>v<sub>B</sub></p><b id="r1b"></b></div>
+      <div class="m"><p>Δ carga piezométrica</p><b id="r5"></b></div>
+      <div class="m"><p>p<sub>A</sub> − p<sub>B</sub></p><b id="r2"></b><small id="r2b"></small></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Procedimiento</h2>
+    <ol id="steps"></ol>
+  </section>
+  <p class="note">El manómetro conecta directo A con B, así que la diferencia de alturas se cancela: h no depende de si el medidor está horizontal, inclinado o vertical. La altura solo cambia p<sub>A</sub> − p<sub>B</sub>.</p>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const $=id=>document.getElementById(id);
+const g=9.81;
+
+/* ---------- Ejemplos de la Antología MF2019 (p. 40–43) ---------- */
+const EX=[
+ {id:'e36',tag:'Ej. resuelto',t:'Fig. 36 · agua a 60 °C',s:'Calcular v_A y Q con lectura 1.18 m',
+  stmt:'Venturi vertical (flujo hacia arriba) con agua a 60 °C. El fluido manométrico tiene densidad relativa 1.25 y la lectura es 1.18 m. B está 0.46 m arriba de A. Calcular la velocidad en A y el caudal.',
+  mode:'Q',dA:300,dB:200,rho:983.2,rhom:1250,h:1.18,v:3,dz:0.46,ori:'v',fluid:'agua',man:'liq',
+  check:'En los apuntes: p_A − p_B = 7.52 kPa, v_A = 1.24 m/s, Q = 8.78×10⁻² m³/s.'},
+ {id:'e37',tag:'Ejercicio',t:'Fig. 37 · agua, Hg',s:'Calcular h con v_B = 10 m/s',
+  stmt:'Para el medidor de la figura 37, calcular la desviación h del manómetro de mercurio (sg = 13.54) si la velocidad del agua en la sección de 25 mm es de 10 m/s. La sección grande mide 50 mm.',
+  mode:'h',dA:50,dB:25,rho:1000,rhom:13540,v:10,h:0.38,dz:0,ori:'h',fluid:'agua',man:'hg'},
+ {id:'t34a',tag:'Tarea 3.4a',t:'Fig. 37 · agua, Hg',s:'Calcular Q con h = 250 mm',
+  stmt:'Para el medidor de la figura 37 (50 mm y 25 mm, mercurio sg = 13.54), calcular el caudal de agua si la desviación del manómetro es h = 250 mm.',
+  mode:'Q',dA:50,dB:25,rho:1000,rhom:13540,h:0.25,v:8,dz:0,ori:'h',fluid:'agua',man:'hg'},
+ {id:'e38',tag:'Ejercicio',t:'Fig. 38 · aceite sg 0.90, Hg',s:'Calcular h con v_B = 10 ft/s',
+  stmt:'Aceite (sg = 0.90) baja por el venturi inclinado de 4 in y 2 in de diámetro. Si la velocidad en la sección de 2 in es de 10 ft/s, calcular la desviación h del manómetro de mercurio (sg = 13.54).',
+  mode:'h',dA:101.6,dB:50.8,rho:900,rhom:13540,v:3.048,h:0.03,dz:null,ori:'i',fluid:'aceite',man:'hg',en:true,
+  conv:'4 in = 101.6 mm · 2 in = 50.8 mm · 10 ft/s = 3.048 m/s'},
+ {id:'t34b',tag:'Tarea 3.4b',t:'Fig. 38 · aceite sg 0.90, Hg',s:'Calcular Q con h = 28 in',
+  stmt:'Aceite (sg = 0.90) baja por el venturi de la figura 38 (4 in y 2 in). Si la desviación del manómetro de mercurio es h = 28 in, calcular el caudal de aceite.',
+  mode:'Q',dA:101.6,dB:50.8,rho:900,rhom:13540,h:0.7112,v:10,dz:null,ori:'i',fluid:'aceite',man:'hg',en:true,
+  conv:'4 in = 101.6 mm · 2 in = 50.8 mm · 28 in = 0.7112 m'},
+ {id:'t34c',tag:'Tarea 3.4c',t:'Fig. 40 · aceite δ 0.90',s:'Calcular Q con lectura 0.60 m',
+  stmt:'El venturi vertical de la figura 40 lleva aceite (δ = 0.90). El fluido manométrico tiene densidad relativa 1.40 y la lectura es 0.60 m. B está 0.25 m arriba de A. Calcular el caudal de aceite.',
+  mode:'Q',dA:200,dB:75,rho:900,rhom:1400,h:0.60,v:2,dz:0.25,ori:'v',fluid:'aceite',man:'liq'},
+];
+let cur=null,mode='h';
+
+/* ---------- Escena ---------- */
+const box=$('c3');
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,0.1,600);
+const ren=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.setSize(innerWidth,innerHeight);box.appendChild(ren.domElement);
+const ctl=new OrbitControls(cam,ren.domElement);ctl.enableDamping=true;
+scene.add(new THREE.AmbientLight(0xffffff,0.75));
+const dl=new THREE.DirectionalLight(0xffffff,1.4);dl.position.set(20,30,25);scene.add(dl);
+const dl2=new THREE.DirectionalLight(0xffffff,0.5);dl2.position.set(-20,-10,-20);scene.add(dl2);
+const gridH=new THREE.GridHelper(120,48,0x888780,0x888780);gridH.material.transparent=true;gridH.material.opacity=0.18;scene.add(gridH);
+
+const pipeG=new THREE.Group();scene.add(pipeG);
+const pipeMesh=new THREE.Group();pipeG.add(pipeMesh);
+const manoG=new THREE.Group();scene.add(manoG);
+
+const glass=new THREE.MeshPhysicalMaterial({color:0x85B7EB,transparent:true,opacity:0.2,roughness:0.1,side:THREE.DoubleSide,depthWrite:false});
+const tubeGlass=new THREE.MeshPhysicalMaterial({color:0xB5D4F4,transparent:true,opacity:0.25,roughness:0.1,depthWrite:false});
+const fluidM=new THREE.MeshStandardMaterial({color:0x378ADD,transparent:true,opacity:0.6});
+const manM=new THREE.MeshStandardMaterial({color:0xb8b8b4,metalness:0.9,roughness:0.25});
+const red=new THREE.MeshBasicMaterial({color:0xD85A30});
+const COL={agua:0x378ADD,aceite:0xC98A1B,hg:0xb8b8b4,liq:0x8E4FA8};
+
+let R1=2.6,R2=1.3,VIS=4,ANG=0;
+const XA=-21,XB=-2;
+const rx=x=>x<-12?R1:x<-4?R1+(R2-R1)*(x+12)/8:x<0?R2:x<16?R2+(R1-R2)*x/16:R1;
+
+function cylY(x,y0,y1,r,m){const h=Math.abs(y1-y0);if(h<0.01)return;const me=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),m);me.position.set(x,(y0+y1)/2,0);manoG.add(me);}
+function barX(x0,x1,y,r,m){const L=Math.abs(x1-x0);if(L<0.01)return;const me=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,24),m);me.rotation.z=Math.PI/2;me.position.set((x0+x1)/2,y,0);manoG.add(me);}
+function clear(G){G.traverse(o=>{if(o.geometry)o.geometry.dispose();});G.clear();}
+function toWorld(x,y){const c=Math.cos(ANG),s=Math.sin(ANG);return [x*c-y*s,x*s+y*c];}
+
+function build(hReal){
+  clear(pipeMesh);clear(manoG);
+  pipeG.rotation.z=ANG;
+  const pts=[];for(let i=0;i<=120;i++){const x=-30+60*i/120;pts.push(new THREE.Vector2(rx(x),x));}
+  const lg=new THREE.LatheGeometry(pts,48);lg.rotateZ(-Math.PI/2);
+  pipeMesh.add(new THREE.Mesh(lg,glass));
+  pipeMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(lg,25),new THREE.LineBasicMaterial({color:0x185FA5,transparent:true,opacity:0.35})));
+  // tomas de presión (lado del manómetro: y local negativa)
+  const tr=0.45;
+  const [ax,ay]=toWorld(XA,-R1),[bx,by]=toWorld(XB,-R2);
+  const vertical=Math.abs(Math.sin(ANG))>0.95;
+  const lA=vertical?ax+4:ax, lB=vertical?ax+9:bx;
+  if(vertical){barX(ax,lA,ay,tr+0.12,tubeGlass);barX(ax,lA,ay,tr,fluidM);barX(bx,lB,by,tr+0.12,tubeGlass);barX(bx,lB,by,tr,fluidM);}
+  const top=Math.min(ay,by);
+  const hp=Math.max(0.6,Math.min(14,hReal*12));
+  const mid=top-10, yAi=mid-hp/2, yBi=mid+hp/2, base=mid-hp/2-4;
+  cylY(lA,base,ay,tr+0.12,tubeGlass);cylY(lB,base,by,tr+0.12,tubeGlass);barX(lA,lB,base,tr+0.12,tubeGlass);
+  barX(lA,lB,base,tr,manM);cylY(lA,base,yAi,tr,manM);cylY(lB,base,yBi,tr,manM);
+  [lA,lB].forEach(x=>{const s=new THREE.Mesh(new THREE.SphereGeometry(tr,16,16),manM);s.position.set(x,base,0);manoG.add(s);});
+  cylY(lA,yAi,ay,tr,fluidM);cylY(lB,yBi,by,tr,fluidM);
+  const xm=Math.max(lA,lB)+2.2;
+  cylY(xm,yAi,yBi,0.09,red);barX(Math.min(lA,lB)-1.2,xm,yAi,0.05,red);barX(Math.min(lA,lB)-1.2,xm,yBi,0.05,red);
+  gridH.position.y=base-2;
+  return {base,top};
+}
+
+/* partículas en coordenadas locales del tubo */
+const N=600,pos=new Float32Array(N*3),F=new Float32Array(N),T=new Float32Array(N);
+for(let i=0;i<N;i++){pos[i*3]=-30+60*Math.random();F[i]=Math.sqrt(Math.random())*0.85;T[i]=Math.random()*Math.PI*2;}
+const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const pMat=new THREE.PointsMaterial({color:0x0C447C,size:0.24});
+pipeG.add(new THREE.Points(pg,pMat));
+
+const VIEWS={
+ h:{ang:0,pos:[14,2,62],tgt:[-2,-8,0]},
+ i:{ang:-0.42,pos:[16,6,66],tgt:[-2,-6,0]},
+ v:{ang:Math.PI/2,pos:[34,4,80],tgt:[6,-6,0]},
+};
+let lastOri=null;
+
+/* ---------- Cálculo ---------- */
+const fx=(n,d=3)=>Number.isFinite(n)?n.toFixed(d):'—';
+function sci(q){if(!Number.isFinite(q))return '—';const e=Math.floor(Math.log10(Math.abs(q)));const m=q/10**e;return `${m.toFixed(2)}×10${sup(e)} m³/s`;}
+function sup(e){const m={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};return String(e).split('').map(c=>m[c]).join('');}
+
+function solve(){
+  const dA=+$('dA').value/1000,dB=+$('dB').value/1000,rho=+$('rho').value,rhom=+$('rhom').value;
+  const dzRaw=$('dz').value.trim();const dz=dzRaw===''?null:+dzRaw;
+  const ok=dA>0&&dB>0&&dB<dA&&rho>0&&rhom>rho;
+  const S=$('steps');
+  if(!ok){S.innerHTML='<li>Revisa los datos: d<sub>B</sub> debe ser menor que d<sub>A</sub> y el fluido manométrico más denso que el que fluye.</li>';return null;}
+  const k=(dB/dA)**2, fac=rhom/rho-1, AA=Math.PI*dA*dA/4, AB=Math.PI*dB*dB/4;
+  let vA,vB,dH,h,Q;
+  if(mode==='h'){
+    vB=+$('vB').value;vA=vB*k;dH=(vB*vB-vA*vA)/(2*g);h=dH/fac;Q=AB*vB;
+  }else{
+    h=+$('hin').value;dH=h*fac;vB=Math.sqrt(2*g*dH/(1-k*k));vA=vB*k;Q=AA*vA;
+  }
+  const dp=dz===null?null:rho*g*(dH+dz);
+  // resultados
+  $('r1').textContent=fx(vA,3)+' m/s';$('r1b').textContent=fx(vB,3)+' m/s';
+  $('r3').textContent=h<1?(h*1000).toFixed(1)+' mm':h.toFixed(3)+' m';
+  $('r3b').textContent=cur&&cur.en?(h/0.0254).toFixed(2)+' in':'';
+  $('r4').textContent=sci(Q);
+  $('r4b').textContent=(Q*1000).toFixed(2)+' L/s'+(cur&&cur.en?' · '+(Q/0.0283168).toFixed(3)+' ft³/s':'');
+  $('r5').textContent=fx(dH,4)+' m';
+  $('r2').textContent=dp===null?'no se necesita':(dp/1000).toFixed(2)+' kPa';
+  $('r2b').textContent=dp===null?'falta z_B − z_A':'';
+  $('kH').classList.toggle('key',mode==='h');$('kQ').classList.toggle('key',mode==='Q');
+  // procedimiento
+  const dAm=(dA*1000).toFixed(1).replace(/\.0$/,''),dBm=(dB*1000).toFixed(1).replace(/\.0$/,'');
+  const st=[];
+  st.push(['Datos',`d_A = ${dAm} mm, d_B = ${dBm} mm, ρ = ${rho} kg/m³, ρ_m = ${rhom} kg/m³`+(cur&&cur.conv?`<br>${cur.conv}`:'')]);
+  if(mode==='h'){
+    st.push(['Continuidad (Q_A = Q_B)',`v_A = v_B (d_B/d_A)² = ${fx(vB,3)} (${dBm}/${dAm})² = ${fx(vA,3)} m/s`]);
+    st.push(['Bernoulli entre A y B',`(p_A − p_B)/γ + (z_A − z_B) = (v_B² − v_A²)/2g<br>= (${fx(vB*vB,3)} − ${fx(vA*vA,3)}) / 19.62 = ${fx(dH,4)} m`]);
+    st.push(['Ecuación del manómetro',`(p_A − p_B)/γ + (z_A − z_B) = h (ρ_m/ρ − 1)<br>las alturas z se cancelan en ambos lados`]);
+    st.push(['Despejar h',`h = ${fx(dH,4)} / (${rhom}/${rho} − 1) = ${fx(dH,4)} / ${fx(fac,4)} = ${fx(h,4)} m`]);
+    st.push(['Caudal (extra)',`Q = A_B v_B = π(${fx(dB,4)})²/4 · ${fx(vB,3)} = ${sci(Q)}`]);
+  }else{
+    st.push(['Ecuación del manómetro',`(p_A − p_B)/γ + (z_A − z_B) = h (ρ_m/ρ − 1)<br>= ${fx(h,4)} (${rhom}/${rho} − 1) = ${fx(dH,4)} m`]);
+    st.push(['Continuidad (Q_A = Q_B)',`v_B = v_A (d_A/d_B)² = ${fx(1/k,4)} v_A`]);
+    st.push(['Bernoulli entre A y B',`${fx(dH,4)} = (v_B² − v_A²)/2g = (${fx(1/(k*k),4)} − 1) v_A² / 19.62<br>v_A = √(19.62 · ${fx(dH,4)} / ${fx(1/(k*k)-1,4)}) = ${fx(vA,3)} m/s`]);
+    st.push(['Caudal',`Q = A_A v_A = π(${fx(dA,4)})²/4 · ${fx(vA,3)} = ${sci(Q)}`]);
+  }
+  if(dp!==null)st.push(['Diferencia de presiones',`p_A − p_B = γ [${fx(dH,4)} + (z_B − z_A)] = ${fx(rho*g/1000,3)} kN/m³ · (${fx(dH,4)} + ${dz}) = ${(dp/1000).toFixed(2)} kPa`]);
+  if(cur&&cur.check)st.push(['Comparar con los apuntes',cur.check]);
+  S.innerHTML=st.map(([a,b])=>`<li>${a}<span class="eq">${b}</span></li>`).join('');
+  return {h,vB};
+}
+
+function update(){
+  const r=solve();
+  const d1=+$('dA').value,d2=+$('dB').value;
+  if(d1>0&&d2>0&&d2<d1){R1=2.6;R2=2.6*d2/d1;}
+  const ori=$('ori').value;ANG=VIEWS[ori].ang;
+  if(r){build(r.h);VIS=Math.max(1.5,Math.min(r.vB,14));}
+  if(ori!==lastOri){const V=VIEWS[ori];cam.position.set(...V.pos);ctl.target.set(...V.tgt);ctl.update();lastOri=ori;}
+}
+
+function setMode(m){mode=m;$('mH').setAttribute('aria-pressed',m==='h');$('mQ').setAttribute('aria-pressed',m==='Q');$('fv').hidden=m!=='h';$('fh').hidden=m!=='Q';update();}
+
+function setFluids(e){
+  const fc=COL[e?e.fluid:'agua'],mc=COL[e?e.man:'hg'];
+  fluidM.color.setHex(fc);pMat.color.setHex(e&&e.fluid==='aceite'?0x7A4F08:0x0C447C);
+  const hg=!e||e.man==='hg';manM.color.setHex(mc);manM.metalness=hg?0.9:0.1;manM.roughness=hg?0.25:0.5;
+  $('lgF').style.background='#'+fc.toString(16).padStart(6,'0');$('lgFt').textContent=e&&e.fluid==='aceite'?'Aceite':'Agua';
+  $('lgM').style.background='#'+mc.toString(16).padStart(6,'0');$('lgMt').textContent=hg?'Mercurio':'Líquido manométrico';
+}
+
+function load(e){
+  cur=e;
+  [...$('ex').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===e.id));
+  $('stmt').textContent=e.stmt;
+  $('dA').value=e.dA;$('dB').value=e.dB;$('rho').value=e.rho;$('rhom').value=e.rhom;
+  $('vB').value=e.v;$('hin').value=e.h;$('dz').value=e.dz===null?'':e.dz;$('ori').value=e.ori;
+  setFluids(e);setMode(e.mode);
+}
+
+$('ex').innerHTML=EX.map(e=>`<button type="button" data-id="${e.id}" aria-pressed="false"><span class="tag">${e.tag}</span><span class="t">${e.t}</span><span class="s">${e.s.replace(/_([A-Z])/g,'<sub>$1</sub>')}</span></button>`).join('');
+$('ex').addEventListener('click',ev=>{const b=ev.target.closest('button');if(b)load(EX.find(x=>x.id===b.dataset.id));});
+$('mH').onclick=()=>setMode('h');$('mQ').onclick=()=>setMode('Q');
+['dA','dB','rho','rhom','vB','hin','dz','ori'].forEach(i=>$(i).addEventListener('input',()=>{if(cur&&['dA','dB','rho','rhom'].includes(i))cur={...cur,check:null,conv:null};update();}));
+$('tog').onclick=()=>{const p=$('panel');p.hidden=!p.hidden;$('tog').textContent=p.hidden?'Mostrar panel':'Ocultar panel';};
+load(EX[1]);
+
+/* ---------- Animación ---------- */
+const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last=performance.now();
+function loop(t){const dt=Math.min((t-last)/1000,0.05);last=t;
+  if(!still)for(let i=0;i<N;i++){let x=pos[i*3];x+=VIS*(R2/rx(x))**2*dt*1.6;if(x>30)x-=60;const r=rx(x);pos[i*3]=x;pos[i*3+1]=r*F[i]*Math.cos(T[i]);pos[i*3+2]=r*F[i]*Math.sin(T[i]);}
+  else for(let i=0;i<N;i++){const x=pos[i*3],r=rx(x);pos[i*3+1]=r*F[i]*Math.cos(T[i]);pos[i*3+2]=r*F[i]*Math.sin(T[i]);}
+  pg.attributes.position.needsUpdate=true;ctl.update();ren.render(scene,cam);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+addEventListener('resize',()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+</script>
+</body>
+</html>
